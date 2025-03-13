@@ -96,13 +96,18 @@ Important: Test the deployment thoroughly in your development environment before
 Troubleshooting Tips
 Connectivity Issues:
 If you cannot access the management interface, verify the NSG rules on both the NICs and subnets.
+
 Health Probe Failures:
 Check that the firewall is configured to respond to TCP probes on port 443 (or the port specified in the probe configuration).
+
 Credential Issues:
 If you forget your credentials, you may need to reset the password using Azure’s VM password reset options or redeploy with known credentials.
+
 Final Notes
+
 Customization:
 This template is provided as a starting point. Modify resource names, subnet IDs, and security rules as needed to fit your environment.
+
 Feedback:
 Feel free to submit issues or pull requests to improve the template further.
 
