@@ -1,5 +1,3 @@
-# PAN-FW-AZURE-COMMON-ELB-and-ILB
-
 # Palo Alto Networks VM-Series Firewall Deployment Template
 
 This ARM template deploys a scalable Palo Alto Networks VM-Series firewall solution in Azure. It creates the following resources:
