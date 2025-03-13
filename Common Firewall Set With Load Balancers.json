@@ -1,0 +1,1016 @@
+
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources."
+      }
+    },
+    "deploymentTag": {
+      "type": "string",
+      "defaultValue": "panNGFWp3ouyc56wujfq",
+      "metadata": {
+        "description": "Deployment tag to apply to all resources."
+      }
+    },
+    "subnetMgmtId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the existing Management Subnet."
+      }
+    },
+    "subnetPublicId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the existing Public (Untrust) Subnet."
+      }
+    },
+    "subnetPrivateId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the existing Private (Trust) Subnet."
+      }
+    },
+    "lbSkuName": {
+      "type": "string",
+      "defaultValue": "Standard",
+      "metadata": {
+        "description": "Load Balancer SKU name (e.g. Standard)."
+      }
+    },
+    "lbSkuTier": {
+      "type": "string",
+      "defaultValue": "Regional",
+      "metadata": {
+        "description": "Load Balancer SKU tier (e.g. Regional)."
+      }
+    },
+    "publicIPDnsLabel_IngressLB": {
+      "type": "string",
+      "defaultValue": "myingresslabel",
+      "metadata": {
+        "description": "DNS domain name label for the Ingress LB public IP. Leave blank if not needed."
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D3_v2",
+      "metadata": {
+        "description": "VM size for the deployed firewalls."
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "defaultValue": "panuser",
+      "metadata": {
+        "description": "Administrator username for the VMs."
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Administrator password for the VMs."
+      }
+    },
+    "availabilitySets_AS_FW_name": {
+      "type": "string",
+      "defaultValue": "AS-FW"
+    },
+    "availabilitySets_Ingress_AS_FW_name": {
+      "type": "string",
+      "defaultValue": "Ingress-AS-FW"
+    },
+    "networkSecurityGroups_Allow_All_name": {
+      "type": "string",
+      "defaultValue": "Allow-All"
+    },
+    "networkSecurityGroups_Management_name": {
+      "type": "string",
+      "defaultValue": "Management"
+    },
+    "publicIPAddresses_Ingress_LB_Pub_name": {
+      "type": "string",
+      "defaultValue": "Ingress-LB-Pub"
+    },
+    "publicIPAddresses_shared_panfw_vm1_pip_name": {
+      "type": "string",
+      "defaultValue": "shared-panfw-vm1-pip"
+    },
+    "publicIPAddresses_shared_panfw_vm1_mgmt_pip_name": {
+      "type": "string",
+      "defaultValue": "shared-panfw-vm1-mgmt-pip"
+    },
+    "publicIPAddresses_shared_panfw_vm2_pip_name": {
+      "type": "string",
+      "defaultValue": "shared-panfw-vm2-pip"
+    },
+    "publicIPAddresses_shared_panfw_vm2_mgmt_pip_name": {
+      "type": "string",
+      "defaultValue": "shared-panfw-vm2-mgmt-pip"
+    },
+    "loadBalancers_LB_Egress_name": {
+      "type": "string",
+      "defaultValue": "LB-Egress"
+    },
+    "loadBalancers_LB_Ingress_name": {
+      "type": "string",
+      "defaultValue": "LB-Ingress"
+    },
+    "virtualMachines_shared_panfw_vm1_name": {
+      "type": "string",
+      "defaultValue": "shared-panfw-vm1"
+    },
+    "virtualMachines_shared_panfw_vm2_name": {
+      "type": "string",
+      "defaultValue": "shared-panfw-vm2"
+    },
+    "networkInterfaces_shared_panfw_vm1_mgmt_name": {
+      "type": "string",
+      "defaultValue": "shared-panfw-vm1-mgmt"
+    },
+    "networkInterfaces_shared_panfw_vm1_untrust_name": {
+      "type": "string",
+      "defaultValue": "shared-panfw-vm1-untrust"
+    },
+    "networkInterfaces_shared_panfw_vm1_trust_name": {
+      "type": "string",
+      "defaultValue": "shared-panfw-vm1-trust"
+    },
+    "networkInterfaces_shared_panfw_vm2_mgmt_name": {
+      "type": "string",
+      "defaultValue": "shared-panfw-vm2-mgmt"
+    },
+    "networkInterfaces_shared_panfw_vm2_untrust_name": {
+      "type": "string",
+      "defaultValue": "shared-panfw-vm2-untrust"
+    },
+    "networkInterfaces_shared_panfw_vm2_trust_name": {
+      "type": "string",
+      "defaultValue": "shared-panfw-vm2-trust"
+    }
+  },
+  "variables": {},
+  "resources": [
+    // 1) Availability Sets
+    {
+      "type": "Microsoft.Compute/availabilitySets",
+      "apiVersion": "2024-07-01",
+      "name": "[parameters('availabilitySets_AS_FW_name')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "DeploymentTag": "[parameters('deploymentTag')]",
+        "simpleTag": "[parameters('deploymentTag')]"
+      },
+      "sku": {
+        "name": "Aligned"
+      },
+      "properties": {
+        "platformUpdateDomainCount": 2,
+        "platformFaultDomainCount": 2
+      }
+    },
+    {
+      "type": "Microsoft.Compute/availabilitySets",
+      "apiVersion": "2024-07-01",
+      "name": "[parameters('availabilitySets_Ingress_AS_FW_name')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "DeploymentTag": "[parameters('deploymentTag')]",
+        "simpleTag": "[parameters('deploymentTag')]"
+      },
+      "sku": {
+        "name": "Aligned"
+      },
+      "properties": {
+        "platformUpdateDomainCount": 2,
+        "platformFaultDomainCount": 2
+      }
+    },
+
+    // 2) Network Security Groups
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2024-05-01",
+      "name": "[parameters('networkSecurityGroups_Allow_All_name')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "simpleTag": "[parameters('deploymentTag')]"
+      },
+      "properties": {
+        "securityRules": [
+          {
+            "name": "[concat(parameters('networkSecurityGroups_Allow_All_name'), '-In')]",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "[concat(parameters('networkSecurityGroups_Allow_All_name'), '-Out')]",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Outbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2024-05-01",
+      "name": "[parameters('networkSecurityGroups_Management_name')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "simpleTag": "[parameters('deploymentTag')]"
+      },
+      "properties": {
+        "securityRules": [
+          {
+            "name": "Allow-All-In",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "0.0.0.0/0",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "Allow-All-Out",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Outbound"
+            }
+          }
+        ]
+      }
+    },
+
+    // 3) Public IP Addresses – Standard SKU; AllocationMethod is Static
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2024-05-01",
+      "name": "[parameters('publicIPAddresses_Ingress_LB_Pub_name')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "DeploymentTag": "[parameters('deploymentTag')]",
+        "simpleTag": "[parameters('deploymentTag')]"
+      },
+      "sku": {
+        "name": "[parameters('lbSkuName')]",
+        "tier": "[parameters('lbSkuTier')]"
+      },
+      "properties": {
+        "publicIPAddressVersion": "IPv4",
+        "publicIPAllocationMethod": "Static",
+        "idleTimeoutInMinutes": 4,
+        "dnsSettings": {
+          "domainNameLabel": "[parameters('publicIPDnsLabel_IngressLB')]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2024-05-01",
+      "name": "[parameters('publicIPAddresses_shared_panfw_vm1_mgmt_pip_name')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "DeploymentTag": "[parameters('deploymentTag')]",
+        "simpleTag": "[parameters('deploymentTag')]"
+      },
+      "sku": {
+        "name": "[parameters('lbSkuName')]",
+        "tier": "[parameters('lbSkuTier')]"
+      },
+      "properties": {
+        "publicIPAddressVersion": "IPv4",
+        "publicIPAllocationMethod": "Static",
+        "idleTimeoutInMinutes": 4
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2024-05-01",
+      "name": "[parameters('publicIPAddresses_shared_panfw_vm1_pip_name')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "DeploymentTag": "[parameters('deploymentTag')]",
+        "simpleTag": "[parameters('deploymentTag')]"
+      },
+      "sku": {
+        "name": "[parameters('lbSkuName')]",
+        "tier": "[parameters('lbSkuTier')]"
+      },
+      "properties": {
+        "publicIPAddressVersion": "IPv4",
+        "publicIPAllocationMethod": "Static",
+        "idleTimeoutInMinutes": 4
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2024-05-01",
+      "name": "[parameters('publicIPAddresses_shared_panfw_vm2_mgmt_pip_name')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "DeploymentTag": "[parameters('deploymentTag')]",
+        "simpleTag": "[parameters('deploymentTag')]"
+      },
+      "sku": {
+        "name": "[parameters('lbSkuName')]",
+        "tier": "[parameters('lbSkuTier')]"
+      },
+      "properties": {
+        "publicIPAddressVersion": "IPv4",
+        "publicIPAllocationMethod": "Static",
+        "idleTimeoutInMinutes": 4
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2024-05-01",
+      "name": "[parameters('publicIPAddresses_shared_panfw_vm2_pip_name')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "DeploymentTag": "[parameters('deploymentTag')]",
+        "simpleTag": "[parameters('deploymentTag')]"
+      },
+      "sku": {
+        "name": "[parameters('lbSkuName')]",
+        "tier": "[parameters('lbSkuTier')]"
+      },
+      "properties": {
+        "publicIPAddressVersion": "IPv4",
+        "publicIPAllocationMethod": "Static",
+        "idleTimeoutInMinutes": 4
+      }
+    },
+
+    // 4) Load Balancers
+    // Egress LB – Frontend uses dynamic private IP allocation from the Trust subnet.
+    {
+      "type": "Microsoft.Network/loadBalancers",
+      "apiVersion": "2024-05-01",
+      "name": "[parameters('loadBalancers_LB_Egress_name')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "DeploymentTag": "[parameters('deploymentTag')]",
+        "simpleTag": "[parameters('deploymentTag')]"
+      },
+      "sku": {
+        "name": "[parameters('lbSkuName')]",
+        "tier": "[parameters('lbSkuTier')]"
+      },
+      "properties": {
+        "frontendIPConfigurations": [
+          {
+            "name": "[concat(parameters('loadBalancers_LB_Egress_name'), '-FrontEnd')]",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[parameters('subnetPrivateId')]"
+              }
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "AS-FW",
+            "properties": {
+              "loadBalancerBackendAddresses": [
+                {
+                  "name": "VM1Trust",
+                  "properties": {
+                    "networkInterfaceIPConfiguration": {
+                      "id": "[concat(resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_shared_panfw_vm1_trust_name')), '/ipConfigurations/ipconfig1')]"
+                    }
+                  }
+                },
+                {
+                  "name": "VM2Trust",
+                  "properties": {
+                    "networkInterfaceIPConfiguration": {
+                      "id": "[concat(resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_shared_panfw_vm2_trust_name')), '/ipConfigurations/ipconfig1')]"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "name": "Allow-All-Out",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('loadBalancers_LB_Egress_name')), '/frontendIPConfigurations/', parameters('loadBalancers_LB_Egress_name'), '-FrontEnd')]"
+              },
+              "frontendPort": 0,
+              "backendPort": 0,
+              "protocol": "All",
+              "enableFloatingIP": true,
+              "idleTimeoutInMinutes": 4,
+              "enableTcpReset": false,
+              "loadDistribution": "Default",
+              "disableOutboundSnat": false,
+              "backendAddressPool": {
+                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('loadBalancers_LB_Egress_name')), '/backendAddressPools/AS-FW')]"
+              },
+              "probe": {
+                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('loadBalancers_LB_Egress_name')), '/probes/TCP-443')]"
+              }
+            }
+          }
+        ],
+        "probes": [
+          {
+            "name": "TCP-443",
+            "properties": {
+              "protocol": "Tcp",
+              "port": 443,
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "probeThreshold": 1,
+              "noHealthyBackendsBehavior": "AllProbedDown"
+            }
+          }
+        ]
+      }
+    },
+    // Ingress LB – Frontend uses dynamic public IP allocation.
+    {
+      "type": "Microsoft.Network/loadBalancers",
+      "apiVersion": "2024-05-01",
+      "name": "[parameters('loadBalancers_LB_Ingress_name')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "DeploymentTag": "[parameters('deploymentTag')]",
+        "simpleTag": "[parameters('deploymentTag')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_Ingress_LB_Pub_name'))]"
+      ],
+      "sku": {
+        "name": "[parameters('lbSkuName')]",
+        "tier": "[parameters('lbSkuTier')]"
+      },
+      "properties": {
+        "frontendIPConfigurations": [
+          {
+            "name": "[concat(parameters('loadBalancers_LB_Ingress_name'), '-FrontEnd')]",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_Ingress_LB_Pub_name'))]"
+              }
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "Ingress-AS-FW",
+            "properties": {
+              "loadBalancerBackendAddresses": [
+                {
+                  "name": "VM1Untrust",
+                  "properties": {
+                    "networkInterfaceIPConfiguration": {
+                      "id": "[concat(resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_shared_panfw_vm1_untrust_name')), '/ipConfigurations/ipconfig1')]"
+                    }
+                  }
+                },
+                {
+                  "name": "VM2Untrust",
+                  "properties": {
+                    "networkInterfaceIPConfiguration": {
+                      "id": "[concat(resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_shared_panfw_vm2_untrust_name')), '/ipConfigurations/ipconfig1')]"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "name": "Allow-80-in",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('loadBalancers_LB_Ingress_name')), '/frontendIPConfigurations/', parameters('loadBalancers_LB_Ingress_name'), '-FrontEnd')]"
+              },
+              "frontendPort": 80,
+              "backendPort": 80,
+              "protocol": "Tcp",
+              "enableFloatingIP": false,
+              "idleTimeoutInMinutes": 4,
+              "enableTcpReset": false,
+              "loadDistribution": "SourceIPProtocol",
+              "disableOutboundSnat": false,
+              "backendAddressPool": {
+                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('loadBalancers_LB_Ingress_name')), '/backendAddressPools/Ingress-AS-FW')]"
+              },
+              "probe": {
+                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('loadBalancers_LB_Ingress_name')), '/probes/TCP-443')]"
+              }
+            }
+          }
+        ],
+        "probes": [
+          {
+            "name": "TCP-443",
+            "properties": {
+              "protocol": "Tcp",
+              "port": 443,
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "probeThreshold": 1,
+              "noHealthyBackendsBehavior": "AllProbedDown"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/loadBalancers/backendAddressPools",
+      "apiVersion": "2024-05-01",
+      "name": "[concat(parameters('loadBalancers_LB_Egress_name'), '/AS-FW')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/loadBalancers', parameters('loadBalancers_LB_Egress_name'))]"
+      ],
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.Network/loadBalancers/backendAddressPools",
+      "apiVersion": "2024-05-01",
+      "name": "[concat(parameters('loadBalancers_LB_Ingress_name'), '/Ingress-AS-FW')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/loadBalancers', parameters('loadBalancers_LB_Ingress_name'))]"
+      ],
+      "properties": {}
+    },
+
+    // 5) NSG Security Rules (child resources)
+    {
+      "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+      "apiVersion": "2024-05-01",
+      "name": "[concat(parameters('networkSecurityGroups_Allow_All_name'), '/', parameters('networkSecurityGroups_Allow_All_name'), '-In')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_Allow_All_name'))]"
+      ],
+      "properties": {
+        "protocol": "*",
+        "sourcePortRange": "*",
+        "destinationPortRange": "*",
+        "sourceAddressPrefix": "*",
+        "destinationAddressPrefix": "*",
+        "access": "Allow",
+        "priority": 100,
+        "direction": "Inbound"
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+      "apiVersion": "2024-05-01",
+      "name": "[concat(parameters('networkSecurityGroups_Allow_All_name'), '/', parameters('networkSecurityGroups_Allow_All_name'), '-Out')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_Allow_All_name'))]"
+      ],
+      "properties": {
+        "protocol": "*",
+        "sourcePortRange": "*",
+        "destinationPortRange": "*",
+        "sourceAddressPrefix": "*",
+        "destinationAddressPrefix": "*",
+        "access": "Allow",
+        "priority": 100,
+        "direction": "Outbound"
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+      "apiVersion": "2024-05-01",
+      "name": "[concat(parameters('networkSecurityGroups_Management_name'), '/Allow-All-In')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_Management_name'))]"
+      ],
+      "properties": {
+        "protocol": "*",
+        "sourcePortRange": "*",
+        "destinationPortRange": "*",
+        "sourceAddressPrefix": "0.0.0.0/0",
+        "destinationAddressPrefix": "*",
+        "access": "Allow",
+        "priority": 100,
+        "direction": "Inbound"
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+      "apiVersion": "2024-05-01",
+      "name": "[concat(parameters('networkSecurityGroups_Management_name'), '/Allow-All-Out')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_Management_name'))]"
+      ],
+      "properties": {
+        "protocol": "*",
+        "sourcePortRange": "*",
+        "destinationPortRange": "*",
+        "sourceAddressPrefix": "*",
+        "destinationAddressPrefix": "*",
+        "access": "Allow",
+        "priority": 100,
+        "direction": "Outbound"
+      }
+    },
+
+    // 6) Virtual Machines – each VM references three NICs.
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2024-07-01",
+      "name": "[parameters('virtualMachines_shared_panfw_vm1_name')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "DeploymentTag": "[parameters('deploymentTag')]",
+        "simpleTag": "[parameters('deploymentTag')]"
+      },
+      "zones": [ "1" ],
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_shared_panfw_vm1_mgmt_name'))]",
+        "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_shared_panfw_vm1_untrust_name'))]",
+        "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_shared_panfw_vm1_trust_name'))]"
+      ],
+      "plan": {
+        "name": "bundle1",
+        "product": "vmseries-flex",
+        "publisher": "paloaltonetworks"
+      },
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "paloaltonetworks",
+            "offer": "vmseries-flex",
+            "sku": "bundle1",
+            "version": "latest"
+          },
+          "osDisk": {
+            "createOption": "FromImage",
+            "managedDisk": {
+              "storageAccountType": "Standard_LRS"
+            }
+          }
+        },
+        "osProfile": {
+          "computerName": "VM-FW1",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]"
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_shared_panfw_vm1_mgmt_name'))]",
+              "properties": {
+                "primary": true
+              }
+            },
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_shared_panfw_vm1_untrust_name'))]",
+              "properties": {
+                "primary": false
+              }
+            },
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_shared_panfw_vm1_trust_name'))]",
+              "properties": {
+                "primary": false
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2024-07-01",
+      "name": "[parameters('virtualMachines_shared_panfw_vm2_name')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "DeploymentTag": "[parameters('deploymentTag')]",
+        "simpleTag": "[parameters('deploymentTag')]"
+      },
+      "zones": [ "2" ],
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_shared_panfw_vm2_mgmt_name'))]",
+        "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_shared_panfw_vm2_untrust_name'))]",
+        "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_shared_panfw_vm2_trust_name'))]"
+      ],
+      "plan": {
+        "name": "bundle1",
+        "product": "vmseries-flex",
+        "publisher": "paloaltonetworks"
+      },
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "paloaltonetworks",
+            "offer": "vmseries-flex",
+            "sku": "bundle1",
+            "version": "latest"
+          },
+          "osDisk": {
+            "createOption": "FromImage",
+            "managedDisk": {
+              "storageAccountType": "Standard_LRS"
+            }
+          }
+        },
+        "osProfile": {
+          "computerName": "VM-FW2",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]"
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_shared_panfw_vm2_mgmt_name'))]",
+              "properties": {
+                "primary": true
+              }
+            },
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_shared_panfw_vm2_untrust_name'))]",
+              "properties": {
+                "primary": false
+              }
+            },
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_shared_panfw_vm2_trust_name'))]",
+              "properties": {
+                "primary": false
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    // 7) Network Interfaces – All NICs use Dynamic private IP allocation.
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2024-05-01",
+      "name": "[parameters('networkInterfaces_shared_panfw_vm1_mgmt_name')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "DeploymentTag": "[parameters('deploymentTag')]",
+        "simpleTag": "[parameters('deploymentTag')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_shared_panfw_vm1_mgmt_pip_name'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_shared_panfw_vm1_mgmt_pip_name'))]"
+              },
+              "subnet": {
+                "id": "[parameters('subnetMgmtId')]"
+              },
+              "primary": true
+            }
+          }
+        ],
+        "enableAcceleratedNetworking": true,
+        "enableIPForwarding": true,
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_Management_name'))]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2024-05-01",
+      "name": "[parameters('networkInterfaces_shared_panfw_vm1_trust_name')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "DeploymentTag": "[parameters('deploymentTag')]",
+        "simpleTag": "[parameters('deploymentTag')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/loadBalancers', parameters('loadBalancers_LB_Egress_name'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[parameters('subnetPrivateId')]"
+              },
+              "primary": true,
+              "loadBalancerBackendAddressPools": [
+                {
+                  "id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('loadBalancers_LB_Egress_name')), '/backendAddressPools/AS-FW')]"
+                }
+              ]
+            }
+          }
+        ],
+        "enableAcceleratedNetworking": true,
+        "enableIPForwarding": true,
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_Allow_All_name'))]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2024-05-01",
+      "name": "[parameters('networkInterfaces_shared_panfw_vm1_untrust_name')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "DeploymentTag": "[parameters('deploymentTag')]",
+        "simpleTag": "[parameters('deploymentTag')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_shared_panfw_vm1_pip_name'))]",
+        "[resourceId('Microsoft.Network/loadBalancers', parameters('loadBalancers_LB_Ingress_name'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_shared_panfw_vm1_pip_name'))]"
+              },
+              "subnet": {
+                "id": "[parameters('subnetPublicId')]"
+              },
+              "primary": true,
+              "loadBalancerBackendAddressPools": [
+                {
+                  "id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('loadBalancers_LB_Ingress_name')), '/backendAddressPools/Ingress-AS-FW')]"
+                }
+              ]
+            }
+          }
+        ],
+        "enableAcceleratedNetworking": true,
+        "enableIPForwarding": true,
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_Allow_All_name'))]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2024-05-01",
+      "name": "[parameters('networkInterfaces_shared_panfw_vm2_mgmt_name')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "DeploymentTag": "[parameters('deploymentTag')]",
+        "simpleTag": "[parameters('deploymentTag')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_shared_panfw_vm2_mgmt_pip_name'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_shared_panfw_vm2_mgmt_pip_name'))]"
+              },
+              "subnet": {
+                "id": "[parameters('subnetMgmtId')]"
+              },
+              "primary": true
+            }
+          }
+        ],
+        "enableAcceleratedNetworking": true,
+        "enableIPForwarding": true,
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_Management_name'))]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2024-05-01",
+      "name": "[parameters('networkInterfaces_shared_panfw_vm2_trust_name')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "DeploymentTag": "[parameters('deploymentTag')]",
+        "simpleTag": "[parameters('deploymentTag')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/loadBalancers', parameters('loadBalancers_LB_Egress_name'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[parameters('subnetPrivateId')]"
+              },
+              "primary": true,
+              "loadBalancerBackendAddressPools": [
+                {
+                  "id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('loadBalancers_LB_Egress_name')), '/backendAddressPools/AS-FW')]"
+                }
+              ]
+            }
+          }
+        ],
+        "enableAcceleratedNetworking": true,
+        "enableIPForwarding": true,
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_Allow_All_name'))]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2024-05-01",
+      "name": "[parameters('networkInterfaces_shared_panfw_vm2_untrust_name')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "DeploymentTag": "[parameters('deploymentTag')]",
+        "simpleTag": "[parameters('deploymentTag')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_shared_panfw_vm2_pip_name'))]",
+        "[resourceId('Microsoft.Network/loadBalancers', parameters('loadBalancers_LB_Ingress_name'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_shared_panfw_vm2_pip_name'))]"
+              },
+              "subnet": {
+                "id": "[parameters('subnetPublicId')]"
+              },
+              "primary": true,
+              "loadBalancerBackendAddressPools": [
+                {
+                  "id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('loadBalancers_LB_Ingress_name')), '/backendAddressPools/Ingress-AS-FW')]"
+                }
+              ]
+            }
+          }
+        ],
+        "enableAcceleratedNetworking": true,
+        "enableIPForwarding": true,
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_Allow_All_name'))]"
+        }
+      }
+    }
+  ],
+  "outputs": {}
+}
